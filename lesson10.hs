@@ -29,13 +29,13 @@ emp1 = liftA2' Employee m_name1 m_phone1
 emp1' = Employee <$> m_name1 <*> m_phone1
 
 -- we impose the followinsaag functional
--- h <S> f === pure g <*> f
+-- h <$> f === pure g <*> f
 
 data Director = Director {tit :: Tit
-                        , dirName :: Name
-                        , dirPhone :: String 
-                        }
-                        deriving Show
+                          , dirName :: Name
+                          , dirPhone :: String 
+                         }
+                         deriving Show
 
 m_tit1 = Just "Dr."
 m_tit2 = Nothing
