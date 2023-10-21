@@ -23,36 +23,38 @@ fun2' = sum . filter even . takeWhile (>1) . iterate (\x -> if even x then x `di
 -- utility function to split a list
 splitlist list = splitAt ((length list + 1) `div` 2) list
 
+-- The Tree data type definition 
 data Tree a = Leaf | Node Integer (Tree a) a (Tree a) deriving (Show)
-
--- 2 balanced Tree are equals if they have the same height
-instance Eq (Tree a) where
-    Leaf == Leaf = True
-    Node x _ _ _ == Leaf = False
-    Node x _ _ _ == Node y _ _ _ = y == x
 
 -- convention height Leaf = -1
 heightTree Leaf = -1
-heightTree (Node n _ _ _)= n
+heightTree (Node n _ _ _) = n
 
--- foldTree 1st implemetation 
--- merging two balanced Trees 
+-- for our purpose 2 balanced Tree are equals if they have the same height
+instance Eq (Tree a) where
+    t1 == t2 = heightTree t1 == heightTree t2
+
+-- foldTree 1st implementation 
+-- composing two balanced Trees with a root
 foldTree :: [a] -> Tree a
 foldTree [] = Leaf
 foldTree (x:xs) =
     let (ys,zs) = splitlist xs
-    in mergeTrees x (foldTree ys) (foldTree zs)
+    in composeTrees x (foldTree ys) (foldTree zs)
 
-mergeTrees :: a -> Tree a -> Tree a -> Tree a
-mergeTrees x tl tr =
+composeTrees :: a -> Tree a -> Tree a -> Tree a
+composeTrees x tl tr =
     let h = 1 + max (heightTree tl) (heightTree  tr)
     in Node h tl x tr
 
+-- foldTree 2st implementation
+-- using insert push down approach 
+-- Less elegant and readable but it could
+-- be used to build trees from streams
+-- for example implementing treeWithHeight
+-- to build generic tree with desired height
 foldTree' :: [a] -> Tree a
 foldTree' = foldr insert Leaf
-
-treeWithHeight :: Integer -> Tree Integer
-treeWithHeight h = head $ dropWhile (\t -> heightTree t < h) $ scanl (\t n -> insert n t) Leaf [1..]
 
 insert :: a -> Tree a -> Tree a
 insert x Leaf = Node 0 Leaf x Leaf
@@ -66,3 +68,10 @@ insert x (Node h left y right) =
         GT -> Node h left y (insert x right)
         EQ -> Node (1 + heightTree right') left y right'
                 where right' = insert x right
+
+treeWithHeight :: Integer -> Tree Integer
+treeWithHeight h = head $ dropWhile (\t -> heightTree t < h) $ scanl' (\t n -> insert n t) Leaf [1..]
+
+-- Ex 3
+xor :: [Bool] -> Bool
+xor = odd . length . filter id 
