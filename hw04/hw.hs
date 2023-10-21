@@ -1,4 +1,4 @@
-import Data.List (foldl', scanl')
+import Data.List (foldl', scanl', (\\))
 -- Ex 1
 fun1 :: [Integer] -> Integer
 fun1 [] = 1
@@ -49,8 +49,8 @@ composeTrees x tl tr =
 
 -- foldTree 2st implementation
 -- using insert push down approach 
--- Less elegant and readable but it could
--- be used to build trees from streams
+-- Less elegant, readable and efficient,  
+-- but it could be used to build trees from streams
 -- for example implementing treeWithHeight
 -- to build generic tree with desired height
 foldTree' :: [a] -> Tree a
@@ -72,6 +72,25 @@ insert x (Node h left y right) =
 treeWithHeight :: Integer -> Tree Integer
 treeWithHeight h = head $ dropWhile (\t -> heightTree t < h) $ scanl' (\t n -> insert n t) Leaf [1..]
 
--- Ex 3
+-- Ex 3.a
 xor :: [Bool] -> Bool
-xor = odd . length . filter id 
+xor = odd . length . filter id
+
+
+-- Ex 3.b
+map' :: (a -> b) -> [a] -> [b]
+map' f = foldr (\x xs ->  f x : xs) []
+
+-- Ex 3.c
+myFoldl :: (a -> b -> a) -> a -> [b] -> a
+myFoldl f base = foldr (flip f) base . reverse
+
+-- Ex 4
+cartProd :: [a] -> [b] -> [(a, b)]
+cartProd xs ys = [(x,y) | x <- xs, y <- ys]
+
+-- sieveSundaram :: Integer -> [Integer]
+
+sieveSundaram :: (Num a, Enum a, Ord a) => a -> [a]
+sieveSundaram n = map (\x -> x * 2 + 1) $ [1..n] \\ [ i + j + 2 * i * j |
+                     i <- [1 .. n], j <- [1 .. n], i <= j, (i + j + 2 * i * j) <= n]
