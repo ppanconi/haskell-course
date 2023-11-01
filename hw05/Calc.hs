@@ -1,11 +1,12 @@
 {-# LANGUAGE TypeSynonymInstances #-}
+{-# LANGUAGE FlexibleInstances #-}
 
 module Calc where
-
 import ExprT
 import Parser
-
 import StackVM
+import qualified Data.Map as M
+import qualified ExprT as VarExprT
 
 -- Ex 1
 eval :: ExprT -> Integer
@@ -65,7 +66,7 @@ testBool = testExp :: Maybe Bool
 testMM = testExp :: Maybe MinMax
 testSat = testExp :: Maybe Mod7
 
--- Exercise 4
+-- Exercise 5
 -- exp :: Expr a => a
 
 -- stackVM exp == Right [IVal exp]
@@ -86,3 +87,38 @@ run s = case stackVM <$> parseExp lit add mul s
                 of Just (Right v) -> v
                    Just (Left e) -> error e
                    _ -> error "not value"
+
+-- Exercise 6
+class HasVars a where
+    var :: String -> a
+
+-- data VarExprT = VLit Integer 
+--     | VAdd VarExprT VarExprT
+--     | VMul VarExprT VarExprT
+--     | VVar String
+--         deriving (Show, Eq)
+
+-- instance Expr VarExprT where
+--     lit = VLit
+--     mul = VMul
+--     add = VAdd
+
+-- instance HasVars VarExprT where
+--   var = VVar 
+
+type MapExpr = M.Map String Integer -> Maybe Integer
+
+instance HasVars (M.Map String Integer -> Maybe Integer) where
+    var = M.lookup
+
+instance Expr (M.Map String Integer -> Maybe Integer) where
+    add e1 e2 m = (+) <$> e1 m <*> e2 m
+    mul e1 e2 m = (*) <$> e1 m <*> e2 m
+    lit x _ = Just x
+
+withVars :: [(String, Integer)]
+    -> (M.Map String Integer -> Maybe Integer) -> Maybe Integer
+withVars vs exp = exp $ M.fromList vs
+
+-- evalWithvars :: [(String, Integer)]
+--     -> Expr -> Maybe Integer
