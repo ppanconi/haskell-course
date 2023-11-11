@@ -97,4 +97,5 @@ instance Num (Matrix Integer) where
 
 fib4 :: Integer -> Integer
 fib4 0 = 0
-fib4 n = f ((Matrix ((1, 1), (1, 0)))^n) where f (Matrix ((a,_), _)) = a
+fib4 1 = 1
+fib4 n = f ((Matrix ((1, 1), (1, 0)))^(n-1)) where f (Matrix ((a,_), _)) = a
