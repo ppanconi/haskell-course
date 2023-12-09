@@ -6,7 +6,7 @@ import Data.Array
 import Data.Foldable
 
 type VisitedDistricts k = Set.Set k
-type EarthVisitState earth k = (earth, VisitedDistricts k, Int)
+type EarthVisitState earth k = (earth, VisitedDistricts k, VisitedDistricts k, Int)
 
 class Ord k => VisitableEarth earth k where
     isLand :: earth -> k -> Bool
@@ -15,17 +15,17 @@ class Ord k => VisitableEarth earth k where
 
     searchLands :: k -> State (EarthVisitState earth k) Int
     searchLands district = do
-        (earth, visited, n) <- get
-        if isLand earth district && not (district `Set.member` visited) then
-            put (earth, visited `Set.union` exploreLand earth district visited, n + 1 )
+        (earth, visited, visitedLands, n) <- get
+        if isLand earth district && not (district `Set.member` visitedLands) then
+            put (earth, visited, visitedLands `Set.union` exploreLand earth district visitedLands, n + 1 )
         else
-            put (earth, Set.insert district visited, n)
+            put (earth, Set.insert district visited, visitedLands, n)
         for_ (neighboringDistricts earth district) $ \neighbor -> do
-              (_, visited, _) <- get
+              (_, visited, _, _) <- get
               unless (neighbor `Set.member` visited) do
                 searchLands neighbor
                 return ()
-        (_, _, n) <- get
+        (_, _, _, n) <- get
         return n
 
     exploreLand :: earth -> k -> VisitedDistricts k -> VisitedDistricts k
@@ -47,7 +47,7 @@ instance VisitableEarth MatrixVisitableEarth (Integer, Integer) where
     [ (i-1, j) | inRange (bounds (matrix earth)) (i-1, j) ] ++
     [ (i, j-1) | inRange (bounds (matrix earth)) (i, j-1) ]
 
-countIslands m = evalState (searchLands $ head (indices (matrix m))) (m, Set.empty, 0)
+countIslands m = evalState (searchLands $ head (indices (matrix m))) (m, Set.empty, Set.empty, 0)
 
 
 matrix0 = MatrixVisitableEarth $ listArray ((0,0),(0,0)) [1]
@@ -60,3 +60,5 @@ matrix44 = MatrixVisitableEarth $ listArray ((0,0),(3,3)) [0,0,0,1, 0,0,0,0, 0,0
 --2
 matrix44' = MatrixVisitableEarth $ listArray ((0,0),(3,3)) [1,1,0,1, 0,1,1,1, 1,0,0,0, 1,1,0,1]
 --3
+matrix44'' = MatrixVisitableEarth $ listArray ((0,0),(3,3)) [1,1,0,1, 1,1,1,1, 1,0,0,0, 1,1,0,1]
+--2
