@@ -4,6 +4,7 @@ import qualified Data.Set as Set
 import Data.List (foldl')
 import Data.Array
 import Data.Foldable
+import Control.Exception (assert)
 
 type VisitedDistricts k = Set.Set k
 type EarthVisitState earth k = (earth, VisitedDistricts k, VisitedDistricts k, Int)
@@ -49,16 +50,41 @@ instance VisitableEarth MatrixVisitableEarth (Integer, Integer) where
 
 countIslands m = evalState (searchLands $ head (indices (matrix m))) (m, Set.empty, Set.empty, 0)
 
-
 matrix0 = MatrixVisitableEarth $ listArray ((0,0),(0,0)) [1]
 --1
-matrix23 = MatrixVisitableEarth $ listArray ((0,0),(1,2)) [1,0,0, 0,1,1]
+matrix23 = MatrixVisitableEarth 
+    $ listArray ((0,0),(1,2)) 
+    [1,0,0, 
+     0,1,1]
 --2
 matrix33 = MatrixVisitableEarth $ listArray ((0,0),(2,2)) [1,1,0, 0,1,1, 1,0,1]
 --2
-matrix44 = MatrixVisitableEarth $ listArray ((0,0),(3,3)) [0,0,0,1, 0,0,0,0, 0,0,1,0, 0,0,0,0]
+matrix44 = MatrixVisitableEarth 
+    $ listArray ((0,0),(3,3)) 
+    [0,0,0,1, 
+     0,0,0,0, 
+     0,0,1,0, 
+     0,0,0,0]
 --2
-matrix44' = MatrixVisitableEarth $ listArray ((0,0),(3,3)) [1,1,0,1, 0,1,1,1, 1,0,0,0, 1,1,0,1]
+matrix44' = MatrixVisitableEarth 
+    $ listArray ((0,0),(3,3)) 
+    [1,1,0,1, 
+     0,1,1,1, 
+     1,0,0,0, 
+     1,1,0,1]
 --3
-matrix44'' = MatrixVisitableEarth $ listArray ((0,0),(3,3)) [1,1,0,1, 1,1,1,1, 1,0,0,0, 1,1,0,1]
+matrix44'' = MatrixVisitableEarth 
+    $ listArray ((0,0),(3,3)) 
+    [1,1,0,1, 
+     1,1,1,1, 
+     1,0,0,0, 
+     1,1,0,1]
 --2
+
+main = do
+    print $ assert (countIslands matrix0 == 1) "ok matrix0"
+    print $ assert (countIslands matrix23 == 2) "ok matrix23"
+    print $ assert (countIslands matrix33 == 2) "ok matrix33"
+    print $ assert (countIslands matrix44 == 2) "ok matrix44"
+    print $ assert (countIslands matrix44' == 3) "ok matrix44'"
+    print $ assert (countIslands matrix44'' == 2) "ok matrix44''"
