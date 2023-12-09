@@ -7,14 +7,14 @@ import Data.Foldable
 import Control.Exception (assert)
 
 type VisitedDistricts k = Set.Set k
-type EarthVisitState earth k = (earth, VisitedDistricts k, VisitedDistricts k)
+type LandsVisitState l k = (l, VisitedDistricts k, VisitedDistricts k)
 
-class Ord k => VisitableEarth earth k where
-    isLand :: earth -> k -> Bool
+class Ord k => VisitableLends l k where
+    isLand :: l -> k -> Bool
 
-    neighboringDistricts :: earth -> k -> [k]
+    neighboringDistricts :: l -> k -> [k]
 
-    searchLands :: k -> State (EarthVisitState earth k) Int
+    searchLands :: k -> State (LandsVisitState l k) Int
     searchLands district = do
         (earth, visited, visitedLands) <- get
         n <- if isLand earth district && not (district `Set.member` visitedLands)
@@ -25,15 +25,14 @@ class Ord k => VisitableEarth earth k where
                 put (earth, Set.insert district visited, visitedLands)
                 return 0
         foldM exploreNeighbor n (neighboringDistricts earth district)
-                where exploreNeighbor c neighbor = do
+                where exploreNeighbor n neighbor = do
                                                     (_, visited, _) <- get
                                                     if not (neighbor `Set.member` visited) then do
                                                         k <- searchLands neighbor
-                                                        return (c + k)
-                                                    else return c
+                                                        return (n + k)
+                                                    else return n
         
-
-    exploreLand :: earth -> k -> VisitedDistricts k -> VisitedDistricts k
+    exploreLand :: l -> k -> VisitedDistricts k -> VisitedDistricts k
     exploreLand earth district visited =
         foldl' exploreNeighbor (Set.insert district visited) $ neighboringDistricts earth district
             where exploreNeighbor visited neighbor =
@@ -42,9 +41,9 @@ class Ord k => VisitableEarth earth k where
                     else visited
 
 
-newtype MatrixVisitableEarth = MatrixVisitableEarth {matrix :: Array (Integer, Integer) Integer}
+newtype MatrixLends = MatrixLends {matrix :: Array (Integer, Integer) Integer}
 
-instance VisitableEarth MatrixVisitableEarth (Integer, Integer) where
+instance VisitableLends MatrixLends (Integer, Integer) where
   isLand earth k = matrix earth ! k == 1
   neighboringDistricts earth (i,j) =
     [ (i+1, j) | inRange (bounds (matrix earth)) (i+1, j) ] ++
@@ -54,30 +53,30 @@ instance VisitableEarth MatrixVisitableEarth (Integer, Integer) where
 
 countIslands m = evalState (searchLands $ head (indices (matrix m))) (m, Set.empty, Set.empty)
 
-matrix0 = MatrixVisitableEarth $ listArray ((0,0),(0,0)) [1]
+matrix0 = MatrixLends $ listArray ((0,0),(0,0)) [1]
 --1
-matrix23 = MatrixVisitableEarth
+matrix23 = MatrixLends
     $ listArray ((0,0),(1,2))
     [1,0,0,
      0,1,1]
 --2
-matrix33 = MatrixVisitableEarth $ listArray ((0,0),(2,2)) [1,1,0, 0,1,1, 1,0,1]
+matrix33 = MatrixLends $ listArray ((0,0),(2,2)) [1,1,0, 0,1,1, 1,0,1]
 --2
-matrix44 = MatrixVisitableEarth
+matrix44 = MatrixLends
     $ listArray ((0,0),(3,3))
     [0,0,0,1,
      0,0,0,0,
      0,0,1,0,
      0,0,0,0]
 --2
-matrix44' = MatrixVisitableEarth
+matrix44' = MatrixLends
     $ listArray ((0,0),(3,3))
     [1,1,0,1,
      0,1,1,1,
      1,0,0,0,
      1,1,0,1]
 --3
-matrix44'' = MatrixVisitableEarth
+matrix44'' = MatrixLends
     $ listArray ((0,0),(3,3))
     [1,1,0,1,
      1,1,1,1,
