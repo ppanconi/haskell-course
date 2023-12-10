@@ -1,4 +1,3 @@
-{-# LANGUAGE BlockArguments #-}
 import Control.Monad.State
 import qualified Data.Set as Set
 import Data.List (foldl')
@@ -10,6 +9,14 @@ type VisitedDistricts k = Set.Set k
 type VisitedLands k = Set.Set k
 type LandsVisitState l k = (l, VisitedDistricts k, VisitedLands k)
 
+-- data LandsVisitState l k = LandsVisitState {
+--     lands :: l
+--     , visited :: VisitedDistricts k
+--     , visitedLands :: VisitedLands k
+--     , trace :: [k]
+
+-- }
+
 class Ord k => VisitableLands l k where
     isLand :: l -> k -> Bool
 
@@ -17,15 +24,15 @@ class Ord k => VisitableLands l k where
 
     searchLands :: k -> State (LandsVisitState l k) Int
     searchLands district = do
-        (earth, visited, visitedLands) <- get
-        n <- if isLand earth district && not (district `Set.member` visitedLands)
+        (lands, visited, visitedLands) <- get
+        n <- if isLand lands district && not (district `Set.member` visitedLands)
             then do
-                put (earth, visited, visitedLands `Set.union` exploreLand earth district visitedLands)
+                put (lands, visited, visitedLands `Set.union` exploreLand lands district visitedLands)
                 return 1
             else do
-                put (earth, Set.insert district visited, visitedLands)
+                put (lands, Set.insert district visited, visitedLands)
                 return 0
-        foldM exploreNeighbor n (neighboringDistricts earth district)
+        foldM exploreNeighbor n (neighboringDistricts lands district)
                 where exploreNeighbor n neighbor = do
                                                     (_, visited, _) <- get
                                                     if not (neighbor `Set.member` visited) then do
@@ -34,50 +41,50 @@ class Ord k => VisitableLands l k where
                                                     else return n
         
     exploreLand :: l -> k -> VisitedDistricts k -> VisitedDistricts k
-    exploreLand earth district visited =
-        foldl' exploreNeighbor (Set.insert district visited) $ neighboringDistricts earth district
+    exploreLand lands district visited =
+        foldl' exploreNeighbor (Set.insert district visited) $ neighboringDistricts lands district
             where exploreNeighbor visited neighbor =
-                    if isLand earth neighbor && not (neighbor `Set.member` visited) then
-                        visited `Set.union` exploreLand earth neighbor visited
+                    if isLand lands neighbor && not (neighbor `Set.member` visited) then
+                        visited `Set.union` exploreLand lands neighbor visited
                     else visited
 
 
-newtype MatrixLends = MatrixLends {matrix :: Array (Integer, Integer) Integer}
+newtype MatrixLands = MatrixLands {matrix :: Array (Integer, Integer) Integer}
 
-instance VisitableLands MatrixLends (Integer, Integer) where
-  isLand earth k = matrix earth ! k == 1
-  neighboringDistricts earth (i,j) =
-    [ (i+1, j) | inRange (bounds (matrix earth)) (i+1, j) ] ++
-    [ (i, j+1) | inRange (bounds (matrix earth)) (i, j+1) ] ++
-    [ (i-1, j) | inRange (bounds (matrix earth)) (i-1, j) ] ++
-    [ (i, j-1) | inRange (bounds (matrix earth)) (i, j-1) ]
+instance VisitableLands MatrixLands (Integer, Integer) where
+  isLand lands k = matrix lands ! k == 1
+  neighboringDistricts lands (i,j) =
+    [ (i+1, j) | inRange (bounds (matrix lands)) (i+1, j) ] ++
+    [ (i, j+1) | inRange (bounds (matrix lands)) (i, j+1) ] ++
+    [ (i-1, j) | inRange (bounds (matrix lands)) (i-1, j) ] ++
+    [ (i, j-1) | inRange (bounds (matrix lands)) (i, j-1) ]
 
 countIslands m = evalState (searchLands $ head (indices (matrix m))) (m, Set.empty, Set.empty)
 
-matrix0 = MatrixLends $ listArray ((0,0),(0,0)) [1]
+matrix0 = MatrixLands $ listArray ((0,0),(0,0)) [1]
 --1
-matrix23 = MatrixLends
+matrix23 = MatrixLands
     $ listArray ((0,0),(1,2))
     [1,0,0,
      0,1,1]
 --2
-matrix33 = MatrixLends $ listArray ((0,0),(2,2)) [1,1,0, 0,1,1, 1,0,1]
+matrix33 = MatrixLands $ listArray ((0,0),(2,2)) [1,1,0, 0,1,1, 1,0,1]
 --2
-matrix44 = MatrixLends
+matrix44 = MatrixLands
     $ listArray ((0,0),(3,3))
     [0,0,0,1,
      0,0,0,0,
      0,0,1,0,
      0,0,0,0]
 --2
-matrix44' = MatrixLends
+matrix44' = MatrixLands
     $ listArray ((0,0),(3,3))
     [1,1,0,1,
      0,1,1,1,
      1,0,0,0,
      1,1,0,1]
 --3
-matrix44'' = MatrixLends
+matrix44'' = MatrixLands
     $ listArray ((0,0),(3,3))
     [1,1,0,1,
      1,1,1,1,
