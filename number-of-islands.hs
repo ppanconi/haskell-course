@@ -5,18 +5,13 @@ import Data.Array
 import Data.Foldable
 import Control.Exception (assert)
 
-type VisitedDistricts k = Set.Set k
-type VisitedLands k = Set.Set k
-type Trace k = [k]
-type LandsVisitState l k = (l, VisitedDistricts k, VisitedLands k, Trace k)
-
--- data LandsVisitState l k = LandsVisitState {
---     lands :: l
---     , visited :: VisitedDistricts k
---     , visitedLands :: VisitedLands k
---     , trace :: [k]
-
--- }
+data LandsVisitState l k = LandsVisitState {
+    lands :: l
+    , visited :: Set.Set k
+    , landsToVisit :: [k]
+    , notLandsToVist :: [k]
+    , trace :: [k]
+}
 
 class Ord k => VisitableLands l k where
     isLand :: l -> k -> Bool
@@ -24,36 +19,31 @@ class Ord k => VisitableLands l k where
     neighboringDistricts :: l -> k -> [k]
 
     searchLands :: k -> State (LandsVisitState l k) Int
-    searchLands district = do
-        (lands, visited, visitedLands, trace) <- get
-        let trace' = district : trace
-            visited' = Set.insert district visited in do
-            put (lands, visited', visitedLands, trace')
-            n <- if isLand lands district && not (district `Set.member` visitedLands)
-                then let (visitedLands', trace'') = exploreLand lands district visitedLands in do
-                    put (lands, visited', visitedLands `Set.union` visitedLands', trace'' ++ trace')
-                    return 1
-                else do
-                    return 0
-            foldM exploreNeighbor n (neighboringDistricts lands district)
-                    where exploreNeighbor n neighbor = do
-                                                        (_, vs, _, _) <- get
-                                                        if not (neighbor `Set.member` vs) then do
-                                                            k <- searchLands neighbor
-                                                            return (n + k)
-                                                        else return n
-
-    exploreLand :: l -> k -> VisitedDistricts k -> (VisitedDistricts k, Trace k)
-    exploreLand lands district visited
-        | not $ isLand lands district  = error "tring to explore a not land district"
-        | otherwise = 
-            let b = (Set.insert district visited, [district])
-            in foldl' exploreNeighbor b $ neighboringDistricts lands district
-            where exploreNeighbor (visited, trace) neighbor =
-                    if isLand lands neighbor && not (neighbor `Set.member` visited) then
-                        let (visited', trace') = exploreLand lands neighbor visited 
-                        in (visited `Set.union` visited', trace' ++ trace)
-                    else (visited, trace)
+    searchLands k = do
+        LandsVisitState lands visited landsToVisit notLandsToVist trace <- get
+        let trace' = k : trace
+            visited' = Set.insert k visited
+            (landsToVisit', notLandsToVist', n') =
+                foldr evaluateNeighbor (landsToVisit, notLandsToVist, if isLand lands k && null visited then 1 else 0) $ filter newNeighbor (neighboringDistricts lands k)
+                where evaluateNeighbor k' (ls, nls, n)
+                        | isLand lands k' && null ls && not (isLand lands k) = (k' : ls, nls, 1)
+                        | isLand lands k' = (k' : ls, nls, n)
+                        | otherwise = (ls, k' : nls, n)
+                      newNeighbor k' = Set.notMember k' visited && notElem k' landsToVisit && notElem k' notLandsToVist
+            in do
+                case landsToVisit' of
+                    (k'':landsToVisit'') -> do
+                        put (LandsVisitState lands visited' landsToVisit'' notLandsToVist' trace')
+                        n'' <- searchLands k''
+                        return (n' + n'')    
+                    [] -> case notLandsToVist' of
+                        (k'': notLandsToVist'') -> do
+                            put (LandsVisitState lands visited' landsToVisit' notLandsToVist'' trace')
+                            n'' <- searchLands k''
+                            return (n' + n'')
+                        [] -> do 
+                            put (LandsVisitState lands visited' landsToVisit' notLandsToVist' trace')
+                            return n'    
 
 newtype MatrixLands = MatrixLands {matrix :: Array (Integer, Integer) Integer}
 
@@ -66,7 +56,7 @@ instance VisitableLands MatrixLands (Integer, Integer) where
     [ (i, j-1) | inRange (bounds (matrix lands)) (i, j-1) ]
 
 countIslands :: MatrixLands -> IO Int
-countIslands m = let (c, (_, _, _, trace)) = runState (searchLands $ head (indices (matrix m))) (m, Set.empty, Set.empty, [])
+countIslands m = let (c, LandsVisitState{trace}) = runState (searchLands $ head (indices (matrix m))) $ LandsVisitState m Set.empty [] [] []
                  in do
                     print "-----------------------"
                     print $ "visited " ++ show (length trace) ++ " districts:"
@@ -81,7 +71,10 @@ matrix23 = MatrixLands
     [1,0,0,
      0,1,1]
 --2
-matrix33 = MatrixLands $ listArray ((0,0),(2,2)) [1,1,0, 0,1,1, 1,0,1]
+matrix33 = MatrixLands $ listArray ((0,0),(2,2)) 
+    [1,1,0, 
+     0,1,1, 
+     1,0,1]
 --2
 matrix44 = MatrixLands
     $ listArray ((0,0),(3,3))
@@ -109,6 +102,7 @@ main = do
     cmatrix0 <- countIslands matrix0
     print $ assert (cmatrix0 == 1) "ok matrix0"
     cmatrix23 <- countIslands matrix23
+    print cmatrix23
     print $ assert (cmatrix23 == 2) "ok matrix23"
     cmatrix33 <- countIslands matrix33
     print $ assert (cmatrix33 == 2) "ok matrix33"
