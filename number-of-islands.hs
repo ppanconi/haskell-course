@@ -7,9 +7,10 @@ import Data.Foldable
 import Control.Exception (assert)
 
 type VisitedDistricts k = Set.Set k
-type LandsVisitState l k = (l, VisitedDistricts k, VisitedDistricts k)
+type VisitedLands k = Set.Set k
+type LandsVisitState l k = (l, VisitedDistricts k, VisitedLands k)
 
-class Ord k => VisitableLends l k where
+class Ord k => VisitableLands l k where
     isLand :: l -> k -> Bool
 
     neighboringDistricts :: l -> k -> [k]
@@ -43,7 +44,7 @@ class Ord k => VisitableLends l k where
 
 newtype MatrixLends = MatrixLends {matrix :: Array (Integer, Integer) Integer}
 
-instance VisitableLends MatrixLends (Integer, Integer) where
+instance VisitableLands MatrixLends (Integer, Integer) where
   isLand earth k = matrix earth ! k == 1
   neighboringDistricts earth (i,j) =
     [ (i+1, j) | inRange (bounds (matrix earth)) (i+1, j) ] ++
