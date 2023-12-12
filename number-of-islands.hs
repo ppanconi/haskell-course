@@ -30,20 +30,18 @@ class Ord k => VisitableLands l k where
                         | isLand lands k' = (k' : ls, nls, n)
                         | otherwise = (ls, k' : nls, n)
                       newNeighbor k' = Set.notMember k' visited && notElem k' landsToVisit && notElem k' notLandsToVist
-            in do
-                case landsToVisit' of
-                    (k'':landsToVisit'') -> do
+            in case (landsToVisit', notLandsToVist') of
+                    (k'':landsToVisit'', _) -> do
                         put (LandsVisitState lands visited' landsToVisit'' notLandsToVist' trace')
                         n'' <- searchLands k''
-                        return (n' + n'')    
-                    [] -> case notLandsToVist' of
-                        (k'': notLandsToVist'') -> do
-                            put (LandsVisitState lands visited' landsToVisit' notLandsToVist'' trace')
-                            n'' <- searchLands k''
-                            return (n' + n'')
-                        [] -> do 
-                            put (LandsVisitState lands visited' landsToVisit' notLandsToVist' trace')
-                            return n'    
+                        return (n' + n'')
+                    ([], k'': notLandsToVist'') -> do
+                        put (LandsVisitState lands visited' landsToVisit' notLandsToVist'' trace')
+                        n'' <- searchLands k''
+                        return (n' + n'')
+                    ([], []) -> do
+                        put (LandsVisitState lands visited' landsToVisit' notLandsToVist' trace')
+                        return n'
 
 newtype MatrixLands = MatrixLands {matrix :: Array (Integer, Integer) Integer}
 
@@ -71,9 +69,9 @@ matrix23 = MatrixLands
     [1,0,0,
      0,1,1]
 --2
-matrix33 = MatrixLands $ listArray ((0,0),(2,2)) 
-    [1,1,0, 
-     0,1,1, 
+matrix33 = MatrixLands $ listArray ((0,0),(2,2))
+    [1,1,0,
+     0,1,1,
      1,0,1]
 --2
 matrix44 = MatrixLands
@@ -102,7 +100,6 @@ main = do
     cmatrix0 <- countIslands matrix0
     print $ assert (cmatrix0 == 1) "ok matrix0"
     cmatrix23 <- countIslands matrix23
-    print cmatrix23
     print $ assert (cmatrix23 == 2) "ok matrix23"
     cmatrix33 <- countIslands matrix33
     print $ assert (cmatrix33 == 2) "ok matrix33"
