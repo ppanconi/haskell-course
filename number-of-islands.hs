@@ -1,66 +1,75 @@
 import Control.Monad.State
-import qualified Data.Set as Set
+import qualified Data.Set as S
 import Data.List (foldl')
 import Data.Array
 import Data.Foldable
 import Control.Exception (assert)
 
 data LandsVisitState l k = LandsVisitState {
-    lands :: l
-    , visited :: Set.Set k
+    visited :: S.Set k
     , landsToVisit :: [k]
-    , notLandsToVist :: [k]
+    , notLandsToVisit :: [k]
     , trace :: [k]
 }
 
 class Ord k => VisitableLands l k where
+    
     isLand :: l -> k -> Bool
 
     neighboringDistricts :: l -> k -> [k]
 
-    searchLands :: k -> State (LandsVisitState l k) Int
-    searchLands k = do
-        LandsVisitState lands visited landsToVisit notLandsToVist trace <- get
+    searchLands :: l -> k -> State (LandsVisitState l k) Int
+    searchLands l k = do
+        LandsVisitState visited landsToVisit notLandsToVisit trace <- get
+
         let trace' = k : trace
-            visited' = Set.insert k visited
-            (landsToVisit', notLandsToVist', n') =
-                foldr evaluateNeighbor (landsToVisit, notLandsToVist, if isLand lands k && null visited then 1 else 0) $ filter newNeighbor (neighboringDistricts lands k)
-                where evaluateNeighbor k' (ls, nls, n)
-                        | isLand lands k' && null ls && not (isLand lands k) = (k' : ls, nls, 1)
-                        | isLand lands k' = (k' : ls, nls, n)
+            visited' = S.insert k visited
+            neighbors = neighboringDistricts l k
+            -- if the starting element in visit is a land we need to count it
+            isStartingDistrictALand = if isLand l k && null visited then 1 else 0
+            -- we evaluate current element neighbors avoiding already know elements.
+            -- 
+            (landsToVisit', notLandsToVisit', n') = foldr evaluateNeighbor (landsToVisit, notLandsToVisit, isStartingDistrictALand)
+                    $ filter unknownNeighbors neighbors
+                where 
+                    unknownNeighbors k' = S.notMember k' visited && notElem k' landsToVisit && notElem k' notLandsToVisit
+                    evaluateNeighbor k' (ls, nls, n)
+                        | isLand l k' && null ls && not (isLand l k) = (k' : ls, nls, 1)
+                        | isLand l k' = (k' : ls, nls, n)
                         | otherwise = (ls, k' : nls, n)
-                      newNeighbor k' = Set.notMember k' visited && notElem k' landsToVisit && notElem k' notLandsToVist
-            in case (landsToVisit', notLandsToVist') of
+            -- we select the next district to visit with
+            -- priority on lands in the stack          
+            in case (landsToVisit', notLandsToVisit') of
                     (k'':landsToVisit'', _) -> do
-                        put (LandsVisitState lands visited' landsToVisit'' notLandsToVist' trace')
-                        n'' <- searchLands k''
+                        put (LandsVisitState visited' landsToVisit'' notLandsToVisit' trace')
+                        n'' <- searchLands l k''
                         return (n' + n'')
-                    ([], k'': notLandsToVist'') -> do
-                        put (LandsVisitState lands visited' landsToVisit' notLandsToVist'' trace')
-                        n'' <- searchLands k''
+                    ([], k'': notLandsToVisit'') -> do
+                        put (LandsVisitState visited' landsToVisit' notLandsToVisit'' trace')
+                        n'' <- searchLands l k''
                         return (n' + n'')
                     ([], []) -> do
-                        put (LandsVisitState lands visited' landsToVisit' notLandsToVist' trace')
+                        put (LandsVisitState visited' landsToVisit' notLandsToVisit' trace')
                         return n'
 
 newtype MatrixLands = MatrixLands {matrix :: Array (Integer, Integer) Integer}
 
 instance VisitableLands MatrixLands (Integer, Integer) where
-  isLand lands k = matrix lands ! k == 1
-  neighboringDistricts lands (i,j) =
-    [ (i+1, j) | inRange (bounds (matrix lands)) (i+1, j) ] ++
-    [ (i, j+1) | inRange (bounds (matrix lands)) (i, j+1) ] ++
-    [ (i-1, j) | inRange (bounds (matrix lands)) (i-1, j) ] ++
-    [ (i, j-1) | inRange (bounds (matrix lands)) (i, j-1) ]
+  isLand l k = matrix l ! k == 1
+  neighboringDistricts l (i,j) =
+    [ (i+1, j) | inRange (bounds (matrix l)) (i+1, j) ] ++
+    [ (i, j+1) | inRange (bounds (matrix l)) (i, j+1) ] ++
+    [ (i-1, j) | inRange (bounds (matrix l)) (i-1, j) ] ++
+    [ (i, j-1) | inRange (bounds (matrix l)) (i, j-1) ]
 
-countIslands :: MatrixLands -> IO Int
-countIslands m = let (c, LandsVisitState{trace}) = runState (searchLands $ head (indices (matrix m))) $ LandsVisitState m Set.empty [] [] []
-                 in do
-                    print "-----------------------"
-                    print $ "visited " ++ show (length trace) ++ " districts:"
-                    let traceStr = foldr' (\t s -> s ++ ">" ++ show t) "" trace
-                    print traceStr
-                    return c
+countIslandsWithTrace :: MatrixLands -> IO Int
+countIslandsWithTrace m = let (c, LandsVisitState{trace}) = runState (searchLands m $ head (indices (matrix m))) $ LandsVisitState S.empty [] [] []
+                          in do
+                             print "-----------------------"
+                             print $ "visited " ++ show (length trace) ++ " districts:"
+                             let traceStr = foldr' (\t s -> s ++ ">" ++ show t) "" trace
+                             print traceStr
+                             return c
 
 matrix0 = MatrixLands $ listArray ((0,0),(0,0)) [1]
 --1
@@ -96,16 +105,32 @@ matrix44'' = MatrixLands
      1,0,0,1]
 --2
 
+matrix1010 = MatrixLands
+    $ listArray ((0,0),(9,9))
+    [1,1,0,1,1,0,0,0,1,0,
+     1,1,1,1,1,1,0,0,0,1,
+     1,0,0,0,1,1,1,1,0,1,
+     1,0,0,1,0,0,0,1,1,0,
+     1,0,0,1,0,0,0,1,0,0,
+     0,0,1,1,0,0,0,0,1,1,
+     0,0,0,1,0,1,0,0,0,1,
+     0,0,1,0,0,1,1,1,1,0,
+     1,0,0,1,0,0,0,1,0,0,
+     1,1,0,1,0,0,0,1,0,0]
+--9
+
 main = do
-    cmatrix0 <- countIslands matrix0
+    cmatrix0 <- countIslandsWithTrace matrix0
     print $ assert (cmatrix0 == 1) "ok matrix0"
-    cmatrix23 <- countIslands matrix23
+    cmatrix23 <- countIslandsWithTrace matrix23
     print $ assert (cmatrix23 == 2) "ok matrix23"
-    cmatrix33 <- countIslands matrix33
+    cmatrix33 <- countIslandsWithTrace matrix33
     print $ assert (cmatrix33 == 2) "ok matrix33"
-    cmatrix44 <- countIslands matrix44
+    cmatrix44 <- countIslandsWithTrace matrix44
     print $ assert (cmatrix44 == 2) "ok matrix44"
-    cmatrix44' <- countIslands matrix44'
+    cmatrix44' <- countIslandsWithTrace matrix44'
     print $ assert (cmatrix44' == 3) "ok matrix44'"
-    cmatrix44'' <- countIslands matrix44''
+    cmatrix44'' <- countIslandsWithTrace matrix44''
     print $ assert (cmatrix44'' == 2) "ok matrix44''"
+    cmatrix1010 <- countIslandsWithTrace matrix1010
+    print $ assert (cmatrix1010 == 9) "ok cmatrix1010"
