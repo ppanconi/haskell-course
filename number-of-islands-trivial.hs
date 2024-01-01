@@ -81,6 +81,11 @@ matrix23 = MatrixLands
     [1,0,0,
      0,1,1]
 --2
+matrix22 = MatrixLands
+    $ listArray ((0,0),(1,1))
+    [0,1,
+     1,0]
+--2
 matrix33 = MatrixLands $ listArray ((0,0),(2,2)) [1,1,0, 0,1,1, 1,0,1]
 --2
 matrix44 = MatrixLands
@@ -104,17 +109,43 @@ matrix44'' = MatrixLands
      1,0,0,0,
      1,0,0,1]
 --2
+matrix1010 = MatrixLands
+    $ listArray ((0,0),(9,9))
+    [1,1,0,1,1,0,0,0,1,0,
+     1,1,1,1,1,1,0,0,0,1,
+     1,0,0,0,1,1,1,1,0,1,
+     1,0,0,1,0,0,0,1,1,0,
+     1,0,0,1,0,0,0,1,0,0,
+     0,0,1,1,0,0,0,0,1,1,
+     0,0,0,1,0,1,0,0,0,1,
+     0,0,1,0,0,1,1,1,1,0,
+     1,0,0,1,0,0,0,1,0,0,
+     1,1,0,1,0,0,0,1,0,0]
+--9
+
 
 main = do
     cmatrix0 <- countIslands matrix0
+    print $ "counted islands: " ++ show cmatrix0
     print $ assert (cmatrix0 == 1) "ok matrix0"
+    cmatrix22 <- countIslands matrix22
+    print $ "counted islands: " ++ show cmatrix22
+    print $ assert (cmatrix22 == 2) "ok matrix22"
     cmatrix23 <- countIslands matrix23
+    print $ "counted islands: " ++ show cmatrix23
     print $ assert (cmatrix23 == 2) "ok matrix23"
     cmatrix33 <- countIslands matrix33
+    print $ "counted islands: " ++ show cmatrix33
     print $ assert (cmatrix33 == 2) "ok matrix33"
     cmatrix44 <- countIslands matrix44
+    print $ "counted islands: " ++ show cmatrix44
     print $ assert (cmatrix44 == 2) "ok matrix44"
     cmatrix44' <- countIslands matrix44'
+    print $ "counted islands: " ++ show cmatrix44
     print $ assert (cmatrix44' == 3) "ok matrix44'"
     cmatrix44'' <- countIslands matrix44''
+    print $ "counted islands: " ++ show cmatrix44
     print $ assert (cmatrix44'' == 2) "ok matrix44''"
+    cmatrix1010 <- countIslands matrix1010
+    print $ "counted islands: " ++ show cmatrix1010
+    print $ assert (cmatrix1010 == 9) "ok cmatrix1010"

@@ -7,22 +7,16 @@ module SetVisitLogbook where
 
     data SetVisitLogbook k = SetVisitLogbook {
         visited :: S.Set k
-        , landsToVisit :: S.Set k
-        , notLandsToVisit :: S.Set k
+        , stackedToVisit :: S.Set k
         , trace :: [k]
     }
 
     instance Ord k => VisitableLands.Logbook (SetVisitLogbook k) k where
-        justBegun a = null $ visited a
-        isUnknownDistrict a k =  S.notMember k (visited a) && S.notMember k (landsToVisit a) && S.notMember k (notLandsToVisit a)
-        isThereALandToVisit a = not $ null $ visited a
-        addALandToVisit a k = a { landsToVisit = S.insert k $ landsToVisit a }
-        addANotLandToVisit a k = a { notLandsToVisit = S.insert k $ notLandsToVisit a }
-        next a k
-            | not $ null $ landsToVisit a =
-                let (k', landsToVisit') = S.deleteFindMin $ landsToVisit a
-                in Just (k', a { notLandsToVisit = landsToVisit', visited = S.insert k $ visited a})
-            | not $ null $ notLandsToVisit a =
-                let (k, notLandsToVisit') = S.deleteFindMin $ notLandsToVisit a
-                in Just (k, a { landsToVisit=notLandsToVisit', visited = S.insert k $ visited a} )
-            | null (landsToVisit a) && null (notLandsToVisit a) = Nothing
+        isNotVisited :: Ord k => SetVisitLogbook k -> k -> Bool
+        isNotVisited l k = S.notMember k (visited l)
+        registerVisited :: Ord k => SetVisitLogbook k -> k -> SetVisitLogbook k
+        registerVisited l k = l { visited = S.insert k $ visited l, stackedToVisit = S.delete k $ stackedToVisit l, trace = k:trace l }
+        stackedToVisit :: Ord k => SetVisitLogbook k -> [k]
+        stackedToVisit l = S.elems $ stackedToVisit l
+        stackToVisit :: Ord k => SetVisitLogbook k -> k -> SetVisitLogbook k
+        stackToVisit l k = l { stackedToVisit = S.insert k $ stackedToVisit l}

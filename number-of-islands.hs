@@ -78,6 +78,11 @@ matrix23 = MatrixLands
     [1,0,0,
      0,1,1]
 --2
+matrix22 = MatrixLands
+    $ listArray ((0,0),(1,1))
+    [0,1,
+     1,0]
+--2
 matrix33 = MatrixLands $ listArray ((0,0),(2,2))
     [1,1,0,
      0,1,1,
@@ -122,6 +127,8 @@ matrix1010 = MatrixLands
 main = do
     cmatrix0 <- countIslandsWithTrace matrix0
     print $ assert (cmatrix0 == 1) "ok matrix0"
+    cmatrix22 <- countIslandsWithTrace matrix22
+    print $ assert (cmatrix22 == 2) "ok matrix22"
     cmatrix23 <- countIslandsWithTrace matrix23
     print $ assert (cmatrix23 == 2) "ok matrix23"
     cmatrix33 <- countIslandsWithTrace matrix33
