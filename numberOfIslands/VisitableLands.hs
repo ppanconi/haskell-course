@@ -8,15 +8,16 @@ module VisitableLands where
         stackedToVisit :: a -> [k]
         stackToVisit :: a -> k -> a
 
-    class VisitableLands l k | k -> l where
+    updateSate :: Logbook s k => k -> State s s
+    updateSate k = do
+        s <- get
+        let s' = registerVisited s k 
+        put s'
+        return s'
+
+    class VisitableLands l k where
         isLand :: l -> k -> Bool
         neighboringDistricts :: l -> k -> [k]
-        updateSate :: Logbook s k => k -> State s s
-        updateSate k = do
-            s <- get
-            let s' = registerVisited s k in do
-                put s'
-                return s'
         exploreLand :: Logbook s k => l -> k -> State s ()
         exploreLand l k = do
             updateSate k
@@ -26,16 +27,17 @@ module VisitableLands where
                     when (isNotVisited s' _k) $ 
                         if isLand l _k then
                             exploreLand l _k
-                        else do
+                        else
                             put $ stackToVisit s' _k
         searchLands :: Logbook s k => l -> k -> State s Int
         searchLands l k = do
-            updateSate k
             -- if the starting element in visit is a land we need to count it        
             n <- if isLand l k then do
                                     exploreLand l k
                                     return 1
-                                else return 0
+                               else do 
+                                    updateSate k
+                                    return 0
             -- we exam k neighboringDistricts
             n' <- foldM exploreNeighbor n (neighboringDistricts l k)
             s <- get
